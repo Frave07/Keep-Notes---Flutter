@@ -6,7 +6,7 @@
 [Frave Developer](https://www.youtube.com/channel/UCkNYlmbx487MPmYvfSMAdRg)
 
 ### Video Yotube
-[Flutter Ecommerce Full App](https://www.youtube.com/watch?v=pPCfF87fsTU&t=72s&ab_channel=FraveDeveloper)
+[Flutter - Keep Notes](https://www.youtube.com/watch?v=pPCfF87fsTU&t=72s&ab_channel=FraveDeveloper)
 
 ### Social Media
 
@@ -25,6 +25,7 @@ ___
 <table border>
     <tr>
         <td><img src="./Screenshot/Screenshot_1627771490.png" alt="" width="200"></td>
+        <td><img src="./Screenshot/Screenshot_1627771494.png" alt="" width="200"></td>
         <td><img src="./Screenshot/Screenshot_1627771498.png" alt="" width="200"></td>
     <tr>
 </table>
