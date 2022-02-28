@@ -13,7 +13,6 @@ void main() async {
   await Hive.initFlutter();
 
   Hive.registerAdapter(NoteModelsAdapter()); 
-
   await Hive.openBox<NoteModels>('keepNote');  
   
   runApp(MyApp());
@@ -22,8 +21,8 @@ void main() async {
 class MyApp extends StatelessWidget {
   
   @override
-  Widget build(BuildContext context) 
-  {
+  Widget build(BuildContext context) {
+    
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(statusBarColor: Colors.transparent, statusBarIconBrightness: Brightness.dark ));
 
     return MultiBlocProvider(
@@ -31,7 +30,7 @@ class MyApp extends StatelessWidget {
         BlocProvider(create: (context) => NotesBloc())
       ],
       child: MaterialApp(
-        title: 'Keep Note - Frave Developer',
+        title: 'Keep Note - Fraved',
         debugShowCheckedModeBanner: false,
         home: HomePage(),
       ),
