@@ -10,71 +10,81 @@ part 'notes_state.dart';
 
 class NotesBloc extends Bloc<NotesEvent, NotesState> {
   
-  NotesBloc() : super(NotesState());
+  NotesBloc() : super(NotesState()) {
 
-  @override
-  Stream<NotesState> mapEventToState( NotesEvent event ) async* {
+    on<AddNoteFrave>(_addNewNote);
+    on<SelectedColorEvent>(_selectedColor);
+    on<SelectedCategoryEvent>(_selectedCategory);
+    on<ChangedListToGrid>(_changedListToGrid);
+    on<UpdateNoteEvent>(_updateNote);
+    on<DeleteNoteEvent>(_deleteNote);
 
-    if ( event is AddNoteFrave ){
-
-        var box = await Hive.openBox<NoteModels>('keepNote');
-
-        var noteModel = NoteModels(
-          title : event.title,
-          body : event.body,
-          color: state.color,
-          isComplete: event.isComplete,
-          category: event.category,
-          created : DateTime.now()
-        );
-
-        box.add(noteModel); 
-
-
-    } else if ( event is SelectedColorEvent ){
-
-      yield state.copyWith(
-        color: event.color
-      );
-
-
-    } else if ( event is SelectedCategoryEvent ){
-
-      yield state.copyWith(
-        category: event.category,
-        colorCategory: event.colorCategory
-      );
-
-
-    } else if ( event is ChangedListToGrid ){
-
-      yield state.copyWith(
-        isList: event.isList
-      );
-
-
-    } else if ( event is UpdateNoteEvent ){
-
-       var box = await Hive.openBox<NoteModels>('keepNote');
-
-       var noteModel = NoteModels(
-          title : event.title,
-          body : event.body,
-          color: state.color,
-          isComplete: event.isComplete,
-          category: event.category,
-          created : DateTime.now()
-        );
-
-        box.putAt(event.index, noteModel);
-    
-    
-    } else if ( event is DeleteNoteEvent ){
-
-      var box = await Hive.openBox<NoteModels>('keepNote');
-
-      box.deleteAt(event.index);
-
-    }
   }
+
+  Future<void> _addNewNote(AddNoteFrave event, Emitter<NotesState> emit) async {
+
+    var box = Hive.box<NoteModels>('keepNote');
+
+    var noteModel = NoteModels(
+      title : event.title,
+      body : event.body,
+      color: state.color,
+      isComplete: event.isComplete,
+      category: event.category,
+      created : DateTime.now()
+    );
+
+    box.add(noteModel); 
+
+  }
+
+
+  Future<void> _selectedColor(SelectedColorEvent event, Emitter<NotesState> emit) async {
+
+    emit(state.copyWith(color: event.color));
+
+  }
+
+
+  Future<void> _selectedCategory(SelectedCategoryEvent event, Emitter<NotesState> emit) async {
+
+    emit(state.copyWith(category: event.category, colorCategory: event.colorCategory));
+
+  }
+
+
+  Future<void> _changedListToGrid(ChangedListToGrid event, Emitter<NotesState> emit) async {
+
+    emit(state.copyWith(isList: event.isList));
+
+  }
+
+
+  Future<void> _updateNote(UpdateNoteEvent event, Emitter<NotesState> emit) async {
+
+    var box = Hive.box<NoteModels>('keepNote');
+
+    var noteModel = NoteModels(
+      title : event.title,
+      body : event.body,
+      color: state.color,
+      isComplete: event.isComplete,
+      category: event.category,
+      created : DateTime.now()
+    );
+
+    box.putAt(event.index, noteModel);
+
+  }
+
+
+  Future<void> _deleteNote(DeleteNoteEvent event, Emitter<NotesState> emit) async {
+
+    var box = Hive.box<NoteModels>('keepNote');
+
+    box.deleteAt(event.index);
+
+  }
+
+
 }
