@@ -20,6 +20,8 @@ dependencies:
   hive: ^2.0.6
   hive_flutter: ^1.1.0
   intl: ^0.17.0
+  timeago: ^3.2.2
+  equatable: ^2.0.3
   
 
 dev_dependencies:

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:keep_notes/Bloc/Notes/notes_bloc.dart';
+import 'package:keep_notes/Bloc/general/general_bloc.dart';
 import 'package:keep_notes/Models/NoteModels.dart';
 import 'package:keep_notes/Screens/HomePage.dart';
  
@@ -27,7 +28,8 @@ class MyApp extends StatelessWidget {
 
     return MultiBlocProvider(
       providers: [
-        BlocProvider(create: (context) => NotesBloc())
+        BlocProvider(create: (context) => NotesBloc()),
+        BlocProvider(create: (context) => GeneralBloc()),
       ],
       child: MaterialApp(
         title: 'Keep Note - Fraved',

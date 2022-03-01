@@ -1,296 +1,351 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:intl/intl.dart';
 import 'package:keep_notes/Bloc/Notes/notes_bloc.dart';
+import 'package:keep_notes/Bloc/general/general_bloc.dart';
 import 'package:keep_notes/Models/NoteModels.dart';
 import 'package:keep_notes/Screens/AddNotePage.dart';
 import 'package:keep_notes/Screens/ShowNotePage.dart';
 import 'package:keep_notes/Widgets/TextFrave.dart';
+import 'package:timeago/timeago.dart' as timeago;
 
+class HomePage extends StatefulWidget{
 
-class HomePage extends StatefulWidget{  
   @override
-  _HomePageState createState() => _HomePageState();
+  State<HomePage> createState() => _HomePageState();
 }
-
 
 class _HomePageState extends State<HomePage> {
 
+  late ScrollController _scrollController;
+
+  List<String> itemDropDown = [
+    'Edit',
+    'View',
+    'Pin favorite'
+  ];
+
   @override
-  void initState() { 
+  void initState() {
+    _scrollController = ScrollController();
+    _scrollController.addListener(_scrollControllerApp);
     super.initState();
   }
 
-  var box = Hive.box<NoteModels>('keepNote');
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    _scrollController.removeListener(_scrollControllerApp);
+    super.dispose();
+  }
 
-  bool isListView = true;
+
+  void _scrollControllerApp(){
+
+    if(_scrollController.offset > 170){
+      BlocProvider.of<GeneralBloc>(context).add(IsScrollTopAppBarEvent(true));
+    }else{
+      BlocProvider.of<GeneralBloc>(context).add(IsScrollTopAppBarEvent(false));
+    }
+
+  }
 
   @override
-  Widget build(BuildContext context)
-  {
+  Widget build(BuildContext context){
+    
     final noteBloc = BlocProvider.of<NotesBloc>(context);
+    final box = Hive.box<NoteModels>('keepNote');
 
     return Scaffold(
       backgroundColor: Color(0xffF2F3F7),
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        backgroundColor: Color(0xffF2F3F7),
-        elevation: 0,
-        title: TextFrave(text: 'Keep Note', fontWeight: FontWeight.w500, fontSize: 21 ),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            onPressed: () {
-                noteBloc.add(ChangedListToGrid(isListView));
-
-                isListView =! isListView;
-            }, 
-            icon: BlocBuilder<NotesBloc, NotesState>(
-              builder: (_, state) => state.isList ? Icon(Icons.table_rows, color: Colors.black) : Icon(Icons.grid_view_rounded, color: Colors.black),
-            )
-          )
-        ],
-      ),
       body: SafeArea(
-        child: ValueListenableBuilder(
-          valueListenable: box.listenable(),
-          builder: (_, Box box, __){
+        child: CustomScrollView(
+          controller: _scrollController,
+          slivers: [
 
-            if( box.values.isEmpty ){
-              return Center(
-                child: TextFrave(text: 'Without Notes', color: Colors.blue ),
-              );
-            }
-            
-            return BlocBuilder<NotesBloc, NotesState>(
-              builder: (_, state) {
+            BlocBuilder<GeneralBloc, GeneralState>(
+              builder: (context, state) => SliverAppBar(
+                flexibleSpace: FlexibleSpaceBar(
+                  title: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 100),
+                    opacity: state.isScrollAppBar ? 1 : 0,
+                    child: TextFrave(
+                      text: 'All notes', isTitle: true, fontSize: 20, color: Colors.black)
+                  ),
+                  background: Container(
+                    color: Color(0xffF2F3F7),
+                    child: AnimatedOpacity(
+                      duration: const Duration(milliseconds: 100),
+                        opacity: !state.isScrollAppBar ? 1 : 0,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          TextFrave(
+                            text: 'All notes', 
+                            isTitle: true, 
+                            fontWeight: FontWeight.w500, 
+                            fontSize: 30,
+                          ),
+                          BlocBuilder<NotesBloc, NotesState>(
+                            builder: (context, state) => TextFrave(
+                              text: '${state.noteLength} notes', 
+                              fontSize: 22, 
+                            ),
+                          )
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                expandedHeight: MediaQuery.of(context).size.height * .4,
+                pinned: true,
+                elevation: 0,
+                backgroundColor: Color(0xffF2F3F7),
+                leading: IconButton(
+                  splashRadius: 20,
+                  onPressed: () {
+                    
+                  },
+                  icon: Icon(Icons.menu_rounded, color: Colors.black),  
+                ),
+                actions: [
+                  BlocBuilder<NotesBloc, NotesState>(
+                    builder: (context, state) => IconButton(
+                      splashRadius: 20,
+                      onPressed: () {
+                        noteBloc.add(ChangedListToGrid(!state.isList));
+                      }, 
+                      icon: Icon( state.isList ? Icons.view_agenda_outlined : Icons.grid_view_rounded, color: Colors.black),
+                    ),
+                  )
+                ],
+              ),
+            ),
+            SliverList(
+              delegate: SliverChildListDelegate([
+                ValueListenableBuilder(
+                  valueListenable: box.listenable(),
+                  builder: (_, Box box, __){
 
-                return state.isList 
-                ? ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                    itemCount: box.values.length,
-                    itemBuilder: (_, i){
-                
-                      NoteModels notes = box.getAt(i);
-                
-                      return BlocBuilder<NotesBloc, NotesState>(
-                        builder: (_, state) =>  state.isList ? _ListNotes(note: notes, index: i) : _GridViewNote(note: notes, index: i)
+                    noteBloc.add(LengthAllNotesEvent(box.length));
+              
+                    if( box.values.isEmpty ){
+                      return Center(
+                        child: TextFrave(text: 'No notes', color: Colors.grey),
                       );
                     }
-                )
-              : GridView.builder(
-                    gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-                      childAspectRatio: 2 / 2,
-                      crossAxisSpacing: 10,
-                      maxCrossAxisExtent: 200,
-                      mainAxisExtent: 250
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                    itemCount: box.values.length,
-                    itemBuilder: (_, i){
-                
-                      NoteModels notes = box.getAt(i);
-                
-                      return BlocBuilder<NotesBloc, NotesState>(
-                        builder: (_, state) =>  state.isList ? _ListNotes(note: notes, index: i) : _GridViewNote(note: notes, index: i)
-                      );
-                
-                    },
-                  );
+                    
+                    return BlocBuilder<NotesBloc, NotesState>(
+                      builder: (_, state) {
+                                
+                        return state.isList 
+                        ? Column(
+                          children: [
+                            _ListNotes(),
+                            state.noteLength == 5 
+                            ? SizedBox(
+                                height: MediaQuery.of(context).size.height * .1,
+                              )
+                            : const SizedBox()
 
-              } 
-            );
+                          ],
+                        )
+                        : _GridViewNote();
+                                
+                      } 
+                    );
+              
+                  },
+                ),
+              ])
+            )
 
-          },
+          ],
         ),
       ),
       floatingActionButton: InkWell(
         borderRadius: BorderRadius.circular(50.0),
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AddNotePage())),
-        child: Container(
-          height: 50,
-          width: 50,
-          decoration: BoxDecoration(
-            color: Color(0xff1977F3),
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(color: Colors.blue, blurRadius: 10, spreadRadius: -5.0)
-            ]
-          ),
-          child: Icon(Icons.add, color: Colors.white),
+        child: CircleAvatar(
+          radius: 24,
+          backgroundColor: Color(0xff1977F3),
+          child: const Icon(Icons.mode_edit_outline, color: Colors.white),
         ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 }
 
 class _ListNotes extends StatelessWidget {
 
-  final NoteModels note;
-  final int index;
-
-  const _ListNotes({required this.note, required this.index});
-
-  String getTimeString(date){
-
-    final dateTime = DateTime.parse(date);
-    final format = DateFormat('d-m-y - HH:mm');
-
-    return format.format(dateTime);
-  }
+  const _ListNotes({Key? key}): super(key: key);
 
   @override
   Widget build(BuildContext context) {
 
-    final size =  MediaQuery.of(context).size;
-
     final noteBloc = BlocProvider.of<NotesBloc>(context);
+    final box = Hive.box<NoteModels>('keepNote');
 
-    return GestureDetector(
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ShowNotePage(note: note, index: index ))),
-      child: Dismissible(
-        key: Key(note.title!),
-        background: Container(),
-        direction: DismissDirection.endToStart,
-        secondaryBackground: Container(
-          padding: EdgeInsets.only(right: 35.0),
-          margin: EdgeInsets.only(bottom: 15.0),
-          alignment: Alignment.centerRight,
-          decoration: BoxDecoration(
-            color: Colors.red,
-            borderRadius: BorderRadius.only(topRight: Radius.circular(20.0), bottomRight: Radius.circular(20.0))
-          ),
-          child: Icon(Icons.delete_sweep_rounded, color: Colors.white, size: 40),
-        ),
-        onDismissed: (direction) => noteBloc.add( DeleteNoteEvent(index) ),
-        child: Container(
-          padding: EdgeInsets.all(10.0),
-          margin: EdgeInsets.only(bottom: 15.0),
-          height: 110,
-          width: size.width,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10.0),
-            color: Colors.white
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  TextFrave(text: note.title.toString(), fontWeight: FontWeight.w600 ),
-                  TextFrave(text: note.category!, fontSize: 16, color: Colors.blueGrey ),
-                ],
+    return ListView.builder(
+      physics: const NeverScrollableScrollPhysics(),
+      shrinkWrap: true,
+      padding: const EdgeInsets.symmetric(horizontal: 10.0),
+      itemCount: box.values.length,
+      itemBuilder: (_, i){
+    
+        NoteModels note = box.getAt(i)!;
+    
+        return GestureDetector(
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ShowNotePage(note: note, index: i ))),
+          child: Dismissible(
+            key: Key(note.title!),
+            background: Container(),
+            direction: DismissDirection.endToStart,
+            secondaryBackground: Container(
+              padding: EdgeInsets.only(right: 35.0),
+              margin: EdgeInsets.only(bottom: 15.0),
+              alignment: Alignment.centerRight,
+              decoration: BoxDecoration(
+                color: Colors.red,
+                borderRadius: BorderRadius.only(topRight: Radius.circular(20.0), bottomRight: Radius.circular(20.0))
               ),
-              SizedBox(height: 10.0),
-              Wrap(
+              child: Icon(Icons.delete_sweep_rounded, color: Colors.white, size: 40),
+            ),
+            onDismissed: (direction) => noteBloc.add( DeleteNoteEvent(i) ),
+            child: Container(
+              padding: EdgeInsets.all(10.0),
+              margin: EdgeInsets.only(bottom: 15.0),
+              height: 110,
+              width: MediaQuery.of(context).size.width,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10.0),
+                color: Colors.white
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  TextFrave(
-                    text: note.body.toString(), 
-                    fontSize: 16, 
-                    color: Colors.grey,
-                    textOverflow: TextOverflow.ellipsis,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      TextFrave(text: note.title.toString(), fontWeight: FontWeight.w600 ),
+                      TextFrave(text: note.category!, fontSize: 16, color: Colors.blueGrey ),
+                    ],
+                  ),
+                  SizedBox(height: 10.0),
+                  Wrap(
+                    children: [
+                      TextFrave(
+                        text: note.body.toString(), 
+                        fontSize: 16, 
+                        color: Colors.grey,
+                        overflow: TextOverflow.ellipsis,
+                      )
+                    ],
+                  ),
+                  SizedBox(height: 15.0),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      TextFrave(text: timeago.format(note.created!), fontSize: 16, color: Colors.grey ),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Icon(Icons.circle, color: Color(note.color!), size: 15)
+                      ),
+                    ],
                   )
                 ],
               ),
-              SizedBox(height: 15.0),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  TextFrave(text: getTimeString(note.created.toString()), fontSize: 16, color: Colors.grey ),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: Icon(Icons.circle, color: Color(note.color!), size: 15)
-                  ),
-                ],
-              )
-            ],
+            ),
           ),
-        ),
-      ),
+        ); 
+      },
     );
   }
 }
 
 
 class _GridViewNote extends StatelessWidget {
-  
-  final NoteModels note;
-  final int index;
 
-  const _GridViewNote({required this.note, required this.index});
-
-  String getTimeString(date){
-
-    final dateTime = DateTime.parse(date);
-    final format = DateFormat('d-m-y');
-
-    return format.format(dateTime);
-  }
+  const _GridViewNote({Key? key}): super(key: key);
 
   @override
-  Widget build(BuildContext context)
-  {   
+  Widget build(BuildContext context){ 
+
     final noteBloc = BlocProvider.of<NotesBloc>(context);
+    final box = Hive.box<NoteModels>('keepNote');
     
-    return GestureDetector(
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ShowNotePage(note: note, index: index ))),
-      child: Dismissible(
-        key: Key(note.title!),
-        direction: DismissDirection.up,
-        background: Container(),
-        secondaryBackground: Container(
-          padding: EdgeInsets.only(bottom: 35.0),
-          margin: EdgeInsets.only(bottom: 15.0),
-          alignment: Alignment.bottomCenter,
-          decoration: BoxDecoration(
-            color: Colors.red,
-            borderRadius: BorderRadius.only(bottomLeft: Radius.circular(20.0), bottomRight: Radius.circular(20.0))
-          ),
-          child: Icon(Icons.delete, color: Colors.white, size: 40),
-        ),
-        onDismissed: (direction) => noteBloc.add( DeleteNoteEvent(index) ),
-        child: Container(
-          padding: EdgeInsets.all(10.0),
-          margin: EdgeInsets.only(bottom: 15.0),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10.0),
-            color: Colors.white
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: TextFrave(text: note.title.toString(), fontWeight: FontWeight.w600 )
-              ),
-              SizedBox(height: 10.0),
-              Expanded(
-                child: Container(
-                  child: TextFrave(
-                    text: note.body.toString(), 
-                    fontSize: 16, 
-                    color: Colors.grey,
-                    textOverflow: TextOverflow.ellipsis,
-                    maxLine: 8,
-                  )
-                ),
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  TextFrave(text: getTimeString(note.created.toString()), fontSize: 16, color: Colors.grey ),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: Icon(Icons.circle, color: Color(note.color!), size: 15)
-                  ),
-                ],
-              )
-            ],
-          ),
-        ),
+    return GridView.builder(
+      physics: const NeverScrollableScrollPhysics(),
+      shrinkWrap: true,
+      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+        childAspectRatio: 2 / 2,
+        crossAxisSpacing: 10,
+        maxCrossAxisExtent: 200,
+        mainAxisExtent: 250
       ),
+      padding: const EdgeInsets.symmetric(horizontal: 10.0),
+      itemCount: box.values.length,
+      itemBuilder: (_, i){
+
+        NoteModels note = box.getAt(i)!;
+
+        return GestureDetector(
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ShowNotePage(note: note, index: i ))),
+          child: Dismissible(
+            key: Key(note.title!),
+            direction: DismissDirection.endToStart,
+            background: Container(),
+            secondaryBackground: Container(
+              padding: EdgeInsets.only(bottom: 35.0),
+              margin: EdgeInsets.only(bottom: 15.0),
+              alignment: Alignment.bottomCenter,
+              decoration: BoxDecoration(
+                color: Colors.red,
+                borderRadius: BorderRadius.only(bottomLeft: Radius.circular(20.0), bottomRight: Radius.circular(20.0))
+              ),
+              child: Icon(Icons.delete, color: Colors.white, size: 40),
+            ),
+            onDismissed: (direction) => noteBloc.add( DeleteNoteEvent(i) ),
+            child: Container(
+              padding: EdgeInsets.all(10.0),
+              margin: EdgeInsets.only(bottom: 15.0),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10.0),
+                color: Colors.white
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: TextFrave(text: note.title.toString(), fontWeight: FontWeight.bold)
+                  ),
+                  SizedBox(height: 10.0),
+                  Expanded(
+                    child: Container(
+                      child: TextFrave(
+                        text: note.body.toString(), 
+                        color: Colors.grey,
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 5,
+                      )
+                    ),
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      TextFrave(text: timeago.format(note.created!), fontSize: 16, color: Colors.grey ),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Icon(Icons.circle, color: Color(note.color!), size: 15)
+                      ),
+                    ],
+                  )
+                ],
+              ),
+            ),
+          ),
+        ); 
+      }
     );
   }
 }

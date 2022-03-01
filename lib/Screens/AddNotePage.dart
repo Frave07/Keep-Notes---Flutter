@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:keep_notes/Bloc/Notes/notes_bloc.dart';
 import 'package:keep_notes/Helpers/modalSelectCategory.dart';
+import 'package:keep_notes/Helpers/modal_warning.dart';
 import 'package:keep_notes/Widgets/SelectedColor.dart';
 import 'package:keep_notes/Widgets/TextFieldBody.dart';
 import 'package:keep_notes/Widgets/TextFieldTitle.dart';
@@ -14,14 +15,16 @@ class AddNotePage extends StatefulWidget {
 }
 
 
-class _AddNotePageState extends State<AddNotePage> 
-{
-  TextEditingController _titleController = TextEditingController(); 
-  TextEditingController _noteController = TextEditingController();
+class _AddNotePageState extends State<AddNotePage> {
+
+  late TextEditingController _titleController;
+  late TextEditingController _noteController;
 
   
   @override
   void initState() {
+    _titleController = TextEditingController();
+    _noteController = TextEditingController();
     super.initState();
   }
 
@@ -42,8 +45,8 @@ class _AddNotePageState extends State<AddNotePage>
 
 
   @override
-  Widget build(BuildContext context)
-  {
+  Widget build(BuildContext context){
+
     final noteBloc = BlocProvider.of<NotesBloc>(context);
 
     return Scaffold(
@@ -51,34 +54,40 @@ class _AddNotePageState extends State<AddNotePage>
       appBar: AppBar(
         backgroundColor: Color(0xffF2F3F7),
         elevation: 0,
-        title: TextFrave(text: 'Add Note', fontWeight: FontWeight.w500, fontSize: 21 ),
+        title: const TextFrave(text: 'Add Note', fontWeight: FontWeight.w500, fontSize: 20, isTitle: true),
         centerTitle: true,
         leading: InkWell(
           onTap: () => Navigator.pop(context),
           child: Center(
-            child: TextFrave(text: 'Cancel', fontSize: 15, color: Color(0xff0C6CF2),)
+            child: const TextFrave(text: 'Cancel', fontSize: 15, color: Color(0xff0C6CF2),)
           )
         ),
         actions: [
           InkWell(
             onTap: () {
 
-              noteBloc.add( AddNoteFrave(
-                title: _titleController.text, 
-                body: _noteController.text, 
-                created: DateTime.now(), 
-                color: noteBloc.state.color, 
-                isComplete: false,
-                category: noteBloc.state.category
-              ));
-              clearText();
-              Navigator.pop(context);
+              if(_titleController.text.trim().isNotEmpty && _noteController.text.trim().isNotEmpty){
+
+                noteBloc.add( AddNoteFrave(
+                  title: _titleController.text, 
+                  body: _noteController.text, 
+                  created: DateTime.now(), 
+                  color: noteBloc.state.color, 
+                  isComplete: false,
+                  category: noteBloc.state.category
+                ));
+                clearText();
+                Navigator.pop(context);
+
+              }else{
+                modalWarning(context, 'Title and note is required');
+              }
 
             },
             child: Container(
               alignment: Alignment.center,
               width: 60,
-              child: TextFrave(text: 'Save', fontSize: 15, color: Color(0xff0C6CF2),)
+              child: const TextFrave(text: 'Save', fontSize: 15, color: Color(0xff0C6CF2))
             ),
           )
         ],
