@@ -70,3 +70,10 @@ class DeleteNoteEvent extends NotesEvent {
   DeleteNoteEvent(this.index);
   
 }
+
+class LengthAllNotesEvent extends NotesEvent {
+  final int length;
+  LengthAllNotesEvent(this.length);
+}
+
+

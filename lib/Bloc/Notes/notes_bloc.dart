@@ -18,6 +18,7 @@ class NotesBloc extends Bloc<NotesEvent, NotesState> {
     on<ChangedListToGrid>(_changedListToGrid);
     on<UpdateNoteEvent>(_updateNote);
     on<DeleteNoteEvent>(_deleteNote);
+    on<LengthAllNotesEvent>(_lengthAllNotes);
 
   }
 
@@ -86,5 +87,13 @@ class NotesBloc extends Bloc<NotesEvent, NotesState> {
 
   }
 
+
+  Future<void> _lengthAllNotes(LengthAllNotesEvent event, Emitter<NotesState> emit) async {
+
+    emit(state.copyWith(noteLength: event.length));
+
+  }
+
+  
 
 }
